@@ -1,0 +1,16 @@
+{
+  "name": "Consulta de Preços - West Brasil",
+  "short_name": "Preços",
+  "description": "Preço por escalonada/quantidade dos produtos das ações táticas B2B e Revenda",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0c4976",
+  "theme_color": "#0c4976",
+  "orientation": "portrait-primary",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
