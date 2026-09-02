@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0c4976">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Preços">
+<title>Consulta de Preços</title>
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+  :root{
+    --blue:#0c4976; --blue-light:#1a6aa8; --red:#e02e39; --white:#fff;
+    --bg:#f4f6f9; --border:#dde3ea; --muted:#6b7a8d; --green:#1d8a4e; --amber:#b45309;
+    --text:#1a2533; --shadow:0 2px 8px rgba(0,0,0,.08);
+    --consumo:#0369a1; --revenda:#6d28d9;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html{-webkit-text-size-adjust:100%}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:40px}
+
+  header{background:var(--blue);color:#fff;padding:12px 16px calc(12px + env(safe-area-inset-top,0)) 16px;padding-top:max(12px,env(safe-area-inset-top));position:sticky;top:0;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.2)}
+  .hrow{display:flex;align-items:center;gap:10px;max-width:640px;margin:0 auto}
+  .logo{font-weight:800;font-size:18px;letter-spacing:-.3px}
+  .sub{font-size:11px;opacity:.75;margin-left:auto;text-align:right;line-height:1.3}
+
+  .wrap{padding:14px 14px 0;max-width:640px;margin:0 auto}
+
+  .searchcard{background:#fff;border-radius:14px;padding:12px;box-shadow:var(--shadow);position:sticky;top:60px;z-index:90}
+  .sbox{display:flex;align-items:center;gap:8px;border:1.5px solid var(--border);border-radius:10px;padding:2px 10px;background:#fff}
+  .sbox:focus-within{border-color:var(--blue-light)}
+  .sbox input{border:0;outline:0;font-size:16px;flex:1;padding:11px 2px;background:transparent;color:var(--text)}
+  .sbox .ico{font-size:18px;color:var(--muted)}
+  .sbox .clr{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
+  .filters{display:flex;gap:7px;margin-top:9px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .filters select{flex:0 0 auto;font-size:13px;padding:8px 9px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);max-width:46vw}
+
+  .count{font-size:12px;color:var(--muted);margin:12px 2px 2px;display:flex;justify-content:space-between;align-items:center}
+
+  .result{background:#fff;border-radius:14px;padding:15px;box-shadow:var(--shadow);margin-top:11px}
+  .result h3{font-size:15px;line-height:1.3;font-weight:700}
+  .code{color:var(--blue);font-weight:800;font-variant-numeric:tabular-nums}
+  .badges{display:flex;flex-wrap:wrap;gap:5px;margin:9px 0 3px}
+  .badge{font-size:10.5px;font-weight:700;padding:3px 8px;border-radius:999px;background:#eef2f6;color:#42546a;border:1px solid var(--border);white-space:nowrap}
+  .badge.consumo{background:#e0f2fe;color:var(--consumo);border-color:#bae6fd}
+  .badge.revenda{background:#f1e9ff;color:var(--revenda);border-color:#e2d3fb}
+  .badge.aba{background:#e9f8ef;color:var(--green);border-color:#bfe9cf}
+  .emb{font-size:11.5px;color:var(--muted);margin-top:5px}
+
+  table{width:100%;border-collapse:collapse;margin-top:11px;font-size:14px}
+  th,td{padding:9px 6px;text-align:right;border-bottom:1px solid var(--border)}
+  th:first-child,td:first-child{text-align:left}
+  thead th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);font-weight:700}
+  tbody tr:last-child td{border-bottom:0}
+  .price{font-weight:800;font-variant-numeric:tabular-nums;color:var(--text)}
+  .rl,.mg{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
+  .note{font-size:11px;color:var(--amber);margin-top:7px}
+
+  .empty{background:#fff;border-radius:14px;padding:36px 18px;text-align:center;color:var(--muted);box-shadow:var(--shadow);margin-top:12px}
+  .empty .big{font-size:34px;opacity:.35}
+  .empty h3{margin:10px 0 4px;color:var(--text);font-size:16px}
+  .empty p{font-size:13px;line-height:1.5}
+  .foot{text-align:center;font-size:11px;color:var(--muted);margin-top:20px;line-height:1.5}
+  b.k{color:var(--blue)}
+</style>
+</head>
+<body>
+<header>
+  <div class="hrow">
+    <span class="logo">West Brasil</span>
+    <span class="sub" id="sub">Consulta de Preços<br>Ações Táticas</span>
+  </div>
+</header>
+
+<div class="wrap">
+  <div class="searchcard">
+    <div class="sbox">
+      <span class="ico">🔎</span>
+      <input id="q" type="search" inputmode="numeric" placeholder="Código ou nome do produto" autocomplete="off" enterkeyhint="search">
+      <button class="clr" id="clr" aria-label="Limpar" style="display:none">×</button>
+    </div>
+    <div class="filters">
+      <select id="fCanal"><option value="">Todos os canais</option></select>
+      <select id="fAba"><option value="">Toda aba / ramo</option></select>
+      <select id="fSeg"><option value="">Todo segmento</option></select>
+    </div>
+  </div>
+
+  <div class="count"><span id="count"></span></div>
+  <div id="results"></div>
+
+  <div class="foot" id="foot"></div>
+</div>
+
+<script src="data/data.js"></script>
+<script>
+"use strict";
+const norm = s => (s==null?"":String(s)).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim().toUpperCase();
+const brl = v => v==null?"—":v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
+const num2 = v => v==null?"—":v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
+const pct = v => v==null?"—":(v*100).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
+
+const $=s=>document.querySelector(s);
+const qEl=$("#q"), clrEl=$("#clr"), fCanal=$("#fCanal"), fAba=$("#fAba"), fSeg=$("#fSeg"),
+      resultsEl=$("#results"), countEl=$("#count"), footEl=$("#foot"), subEl=$("#sub");
+
+const ENTRIES = (typeof PRECOS!=="undefined") ? PRECOS : [];
+const FILESMETA = (typeof FILES!=="undefined") ? FILES : [];
+const VERSION = (typeof DATA_VERSION!=="undefined") ? DATA_VERSION : "";
+
+function fill(sel,all,vals){
+  const cur=sel.value;
+  sel.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join("");
+}
+function boot(){
+  fill(fCanal,"Todos os canais",[...new Set(ENTRIES.map(e=>e.ca).filter(Boolean))].sort());
+  fill(fAba,"Toda aba / ramo",[...new Set(ENTRIES.map(e=>e.ab).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")));
+  fill(fSeg,"Todo segmento",[...new Set(ENTRIES.map(e=>e.sg).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")));
+  const codes=new Set(ENTRIES.map(e=>e.c)).size;
+  footEl.innerHTML = `${ENTRIES.length} preços · ${codes} produtos<br>Base gerada em <b class="k">${VERSION}</b>`;
+  render();
+}
+
+let t=null;
+qEl.addEventListener("input",()=>{ clrEl.style.display=qEl.value?"block":"none"; clearTimeout(t); t=setTimeout(render,110); });
+clrEl.onclick=()=>{ qEl.value=""; clrEl.style.display="none"; qEl.focus(); render(); };
+[fCanal,fAba,fSeg].forEach(s=>s.addEventListener("change",render));
+
+function render(){
+  const q=norm(qEl.value), fc=fCanal.value, fa=fAba.value, fs=fSeg.value;
+  let list=ENTRIES;
+  if(fc) list=list.filter(e=>e.ca===fc);
+  if(fa) list=list.filter(e=>e.ab===fa);
+  if(fs) list=list.filter(e=>e.sg===fs);
+  if(q){
+    const d=q.replace(/\D/g,"");
+    list=list.filter(e=>{ const c=norm(e.c);
+      return (d && c.replace(/\D/g,"").includes(d)) || norm(e.d).includes(q) || c.includes(q); });
+  }
+  list=list.slice().sort((a,b)=> a.c.localeCompare(b.c,"pt-BR",{numeric:true}) || a.ab.localeCompare(b.ab,"pt-BR"));
+  countEl.textContent = list.length? `${list.length} resultado(s)`:"";
+
+  if(!q && !fc && !fa && !fs){
+    resultsEl.innerHTML = empty("🔎","Busque um produto","Digite o código (ex.: <b class='k'>123073</b>) ou o nome. Use os filtros para escolher canal, aba/ramo e segmento.");
+    return;
+  }
+  if(!list.length){ resultsEl.innerHTML=empty("🤔","Nada encontrado","Confira o código ou remova algum filtro."); return; }
+  if(list.length>300){ resultsEl.innerHTML=empty("⚠️","Muitos resultados",`Há ${list.length} itens. Digite o código completo ou use os filtros.`); return; }
+  resultsEl.innerHTML=list.map(card).join("");
+}
+
+function empty(ico,t,s){ return `<div class="empty"><div class="big">${ico}</div><h3>${t}</h3><p>${s}</p></div>`; }
+function canalCls(c){ return /REVENDA/.test(norm(c))?"revenda":/CONSUMO|B2B/.test(norm(c))?"consumo":""; }
+
+function card(e){
+  const hasFaixa=e.t.some(x=>x.x);
+  const margemAlvo=hasFaixa && e.t.every(x=>/PRECO A/.test(norm(x.l)));
+  const perLitro=e.t.every(x=>x.pl);
+  const rows=e.t.map(x=>`<tr>
+      <td>${x.l}</td>
+      <td class="price">${brl(x.p)}</td>
+      <td class="rl">${x.u!=null?num2(x.u):"—"}</td>
+      <td class="mg">${x.m!=null?pct(x.m):"—"}</td></tr>`).join("");
+  const badges=[
+    e.ca?`<span class="badge ${canalCls(e.ca)}">${e.ca}</span>`:"",
+    e.ab?`<span class="badge aba">${e.ab}</span>`:"",
+    e.im?`<span class="badge">IMBP: ${e.im}</span>`:"",
+    e.sg?`<span class="badge">Segmento: ${e.sg}</span>`:""
+  ].join("");
+  const col1 = margemAlvo?"Preço por margem-alvo":hasFaixa?"Faixa de volume":"Quantidade / escalonada";
+  const note = margemAlvo?`<div class="note">Preços de referência por margem-alvo (não é escalonada por quantidade).</div>`
+              :hasFaixa?`<div class="note">Preços por faixa de volume (sortimento).</div>`:"";
+  return `<div class="result">
+    <h3><span class="code">${e.c}</span> — ${e.d||""}</h3>
+    <div class="badges">${badges}</div>
+    ${e.e!=null?`<div class="emb">Embalagem: ${num2(e.e)} L/kg</div>`:""}
+    <table>
+      <thead><tr><th>${col1}</th><th>${perLitro?"Preço R$/L":"Preço"}</th><th>R$/L</th><th>Margem</th></tr></thead>
+      <tbody>${rows}</tbody>
+    </table>${note}</div>`;
+}
+
+boot();
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{}));
+}
+</script>
+</body>
+</html>
