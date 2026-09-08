@@ -34,8 +34,13 @@
   .sbox input{border:0;outline:0;font-size:16px;flex:1;padding:11px 2px;background:transparent;color:var(--text)}
   .sbox .ico{font-size:18px;color:var(--muted)}
   .sbox .clr{border:0;background:transparent;color:var(--muted);font-size:20px;cursor:pointer;padding:4px}
-  .filters{display:flex;gap:7px;margin-top:9px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
-  .filters select{flex:0 0 auto;font-size:13px;padding:8px 9px;border:1.5px solid var(--border);border-radius:9px;background:#fff;color:var(--text);max-width:46vw}
+  .canallabel{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin:0 2px 7px}
+  #lbl2{margin-top:13px}
+  .canalpick{display:flex;gap:8px}
+  .canalbtn{flex:1;padding:13px 8px;border:1.5px solid var(--border);border-radius:10px;background:#fff;color:var(--text);font-size:15px;font-weight:700;cursor:pointer;transition:.12s}
+  .canalbtn:active{transform:scale(.98)}
+  .canalbtn.active{background:var(--blue);border-color:var(--blue);color:#fff;box-shadow:0 2px 6px rgba(12,73,118,.3)}
+  .sbox input:disabled{color:#aab4c0}
 
   .count{font-size:12px;color:var(--muted);margin:12px 2px 2px;display:flex;justify-content:space-between;align-items:center}
 
@@ -76,15 +81,16 @@
 
 <div class="wrap">
   <div class="searchcard">
-    <div class="sbox">
-      <span class="ico">🔎</span>
-      <input id="q" type="search" inputmode="numeric" placeholder="Código ou nome do produto" autocomplete="off" enterkeyhint="search">
-      <button class="clr" id="clr" aria-label="Limpar" style="display:none">×</button>
+    <div class="canallabel">1. Escolha o canal</div>
+    <div class="canalpick" id="canalPick">
+      <button type="button" class="canalbtn" data-canal="Consumo (B2B)">B2B</button>
+      <button type="button" class="canalbtn" data-canal="Revenda">Revenda</button>
     </div>
-    <div class="filters">
-      <select id="fCanal"><option value="">Todos os canais</option></select>
-      <select id="fAba"><option value="">Toda aba / ramo</option></select>
-      <select id="fSeg"><option value="">Todo segmento</option></select>
+    <div class="canallabel" id="lbl2">2. Digite o código</div>
+    <div class="sbox" id="sbox">
+      <span class="ico">🔎</span>
+      <input id="q" type="search" inputmode="numeric" placeholder="Código ou nome do produto" autocomplete="off" enterkeyhint="search" disabled>
+      <button class="clr" id="clr" aria-label="Limpar" style="display:none">×</button>
     </div>
   </div>
 
@@ -103,51 +109,56 @@ const num2 = v => v==null?"—":v.toLocaleString("pt-BR",{minimumFractionDigits:
 const pct = v => v==null?"—":(v*100).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
 
 const $=s=>document.querySelector(s);
-const qEl=$("#q"), clrEl=$("#clr"), fCanal=$("#fCanal"), fAba=$("#fAba"), fSeg=$("#fSeg"),
+const qEl=$("#q"), clrEl=$("#clr"), canalPick=$("#canalPick"),
       resultsEl=$("#results"), countEl=$("#count"), footEl=$("#foot"), subEl=$("#sub");
 
 const ENTRIES = (typeof PRECOS!=="undefined") ? PRECOS : [];
-const FILESMETA = (typeof FILES!=="undefined") ? FILES : [];
 const VERSION = (typeof DATA_VERSION!=="undefined") ? DATA_VERSION : "";
 
-function fill(sel,all,vals){
-  const cur=sel.value;
-  sel.innerHTML=`<option value="">${all}</option>`+vals.map(v=>`<option${v===cur?" selected":""}>${v}</option>`).join("");
+let canal = "";  // "Consumo (B2B)" | "Revenda"
+try{ canal = localStorage.getItem("precos_canal") || ""; }catch(e){}
+
+function setCanal(c){
+  canal = c;
+  try{ localStorage.setItem("precos_canal", c); }catch(e){}
+  [...canalPick.children].forEach(b=>b.classList.toggle("active", b.dataset.canal===c));
+  qEl.disabled = !c;
+  if(c){ qEl.focus(); }
+  render();
 }
+[...canalPick.children].forEach(b=> b.addEventListener("click",()=>setCanal(b.dataset.canal)) );
+
 function boot(){
-  fill(fCanal,"Todos os canais",[...new Set(ENTRIES.map(e=>e.ca).filter(Boolean))].sort());
-  fill(fAba,"Toda aba / ramo",[...new Set(ENTRIES.map(e=>e.ab).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")));
-  fill(fSeg,"Todo segmento",[...new Set(ENTRIES.map(e=>e.sg).filter(Boolean))].sort((a,b)=>a.localeCompare(b,"pt-BR")));
   const codes=new Set(ENTRIES.map(e=>e.c)).size;
   footEl.innerHTML = `${ENTRIES.length} preços · ${codes} produtos<br>Base gerada em <b class="k">${VERSION}</b>`;
-  render();
+  if(canal) setCanal(canal); else render();
 }
 
 let t=null;
 qEl.addEventListener("input",()=>{ clrEl.style.display=qEl.value?"block":"none"; clearTimeout(t); t=setTimeout(render,110); });
 clrEl.onclick=()=>{ qEl.value=""; clrEl.style.display="none"; qEl.focus(); render(); };
-[fCanal,fAba,fSeg].forEach(s=>s.addEventListener("change",render));
 
 function render(){
-  const q=norm(qEl.value), fc=fCanal.value, fa=fAba.value, fs=fSeg.value;
-  let list=ENTRIES;
-  if(fc) list=list.filter(e=>e.ca===fc);
-  if(fa) list=list.filter(e=>e.ab===fa);
-  if(fs) list=list.filter(e=>e.sg===fs);
+  if(!canal){
+    countEl.textContent="";
+    resultsEl.innerHTML = empty("👆","Escolha o canal","Toque em <b class='k'>B2B</b> ou <b class='k'>Revenda</b> para começar.");
+    return;
+  }
+  const q=norm(qEl.value);
+  let list=ENTRIES.filter(e=>e.ca===canal);
   if(q){
     const d=q.replace(/\D/g,"");
     list=list.filter(e=>{ const c=norm(e.c);
       return (d && c.replace(/\D/g,"").includes(d)) || norm(e.d).includes(q) || c.includes(q); });
   }
   list=list.slice().sort((a,b)=> a.c.localeCompare(b.c,"pt-BR",{numeric:true}) || a.ab.localeCompare(b.ab,"pt-BR"));
-  countEl.textContent = list.length? `${list.length} resultado(s)`:"";
+  countEl.textContent = q && list.length? `${list.length} resultado(s)`:"";
 
-  if(!q && !fc && !fa && !fs){
-    resultsEl.innerHTML = empty("🔎","Busque um produto","Digite o código (ex.: <b class='k'>123073</b>) ou o nome. Use os filtros para escolher canal, aba/ramo e segmento.");
+  if(!q){
+    resultsEl.innerHTML = empty("🔎","Digite o código",`Canal <b class='k'>${canal==="Consumo (B2B)"?"B2B":"Revenda"}</b> selecionado. Digite o código (ex.: <b class='k'>123073</b>) ou o nome do produto.`);
     return;
   }
-  if(!list.length){ resultsEl.innerHTML=empty("🤔","Nada encontrado","Confira o código ou remova algum filtro."); return; }
-  if(list.length>300){ resultsEl.innerHTML=empty("⚠️","Muitos resultados",`Há ${list.length} itens. Digite o código completo ou use os filtros.`); return; }
+  if(!list.length){ resultsEl.innerHTML=empty("🤔","Nada encontrado",`Nenhum produto com esse código/nome no canal ${canal==="Consumo (B2B)"?"B2B":"Revenda"}.`); return; }
   resultsEl.innerHTML=list.map(card).join("");
 }
 
@@ -164,7 +175,6 @@ function card(e){
       <td class="rl">${x.u!=null?num2(x.u):"—"}</td>
       <td class="mg">${x.m!=null?pct(x.m):"—"}</td></tr>`).join("");
   const badges=[
-    e.ca?`<span class="badge ${canalCls(e.ca)}">${e.ca}</span>`:"",
     e.ab?`<span class="badge aba">${e.ab}</span>`:"",
     e.im?`<span class="badge">IMBP: ${e.im}</span>`:"",
     e.sg?`<span class="badge">Segmento: ${e.sg}</span>`:""
