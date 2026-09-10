@@ -106,7 +106,7 @@
 const norm = s => (s==null?"":String(s)).normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/\s+/g," ").trim().toUpperCase();
 const brl = v => v==null?"—":v.toLocaleString("pt-BR",{style:"currency",currency:"BRL",minimumFractionDigits:2,maximumFractionDigits:2});
 const num2 = v => v==null?"—":v.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2});
-const pct = v => v==null?"—":(v*100).toLocaleString("pt-BR",{minimumFractionDigits:1,maximumFractionDigits:1})+"%";
+const pct = v => v==null?"—":(v*100).toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2})+"%";
 
 const $=s=>document.querySelector(s);
 const qEl=$("#q"), clrEl=$("#clr"), canalPick=$("#canalPick"),
@@ -172,8 +172,7 @@ function card(e){
   const rows=e.t.map(x=>`<tr>
       <td>${x.l}</td>
       <td class="price">${brl(x.p)}</td>
-      <td class="rl">${x.u!=null?num2(x.u):"—"}</td>
-      <td class="mg">${x.m!=null?pct(x.m):"—"}</td></tr>`).join("");
+      <td class="mg">${x.ds!=null?pct(x.ds):"—"}</td></tr>`).join("");
   const badges=[
     e.ab?`<span class="badge aba">${e.ab}</span>`:"",
     e.im?`<span class="badge">IMBP: ${e.im}</span>`:"",
@@ -187,7 +186,7 @@ function card(e){
     <div class="badges">${badges}</div>
     ${e.e!=null?`<div class="emb">Embalagem: ${num2(e.e)} L/kg</div>`:""}
     <table>
-      <thead><tr><th>${col1}</th><th>${perLitro?"Preço R$/L":"Preço"}</th><th>R$/L</th><th>Margem</th></tr></thead>
+      <thead><tr><th>${col1}</th><th>Preço</th><th>Desconto</th></tr></thead>
       <tbody>${rows}</tbody>
     </table>${note}</div>`;
 }
