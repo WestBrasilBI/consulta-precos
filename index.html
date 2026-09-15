@@ -89,7 +89,7 @@
     <div class="canallabel" id="lbl2">2. Digite o código</div>
     <div class="sbox" id="sbox">
       <span class="ico">🔎</span>
-      <input id="q" type="search" inputmode="numeric" placeholder="Código ou nome do produto" autocomplete="off" enterkeyhint="search" disabled>
+      <input id="q" type="search" placeholder="Código ou nome do produto" autocomplete="off" autocorrect="off" autocapitalize="none" enterkeyhint="search" disabled>
       <button class="clr" id="clr" aria-label="Limpar" style="display:none">×</button>
     </div>
   </div>
@@ -147,9 +147,13 @@ function render(){
   const q=norm(qEl.value);
   let list=ENTRIES.filter(e=>e.ca===canal);
   if(q){
-    const d=q.replace(/\D/g,"");
-    list=list.filter(e=>{ const c=norm(e.c);
-      return (d && c.replace(/\D/g,"").includes(d)) || norm(e.d).includes(q) || c.includes(q); });
+    // busca por código E/OU nome: cada palavra digitada precisa aparecer
+    // no código ou na descrição (em qualquer ordem).
+    const terms=q.split(/\s+/).filter(Boolean);
+    list=list.filter(e=>{
+      const hay=norm(e.c)+" "+norm(e.d);
+      return terms.every(t=>hay.includes(t));
+    });
   }
   list=list.slice().sort((a,b)=> a.c.localeCompare(b.c,"pt-BR",{numeric:true}) || a.ab.localeCompare(b.ab,"pt-BR"));
   countEl.textContent = q && list.length? `${list.length} resultado(s)`:"";
