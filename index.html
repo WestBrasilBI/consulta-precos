@@ -85,6 +85,7 @@
     <div class="canalpick" id="canalPick">
       <button type="button" class="canalbtn" data-canal="Consumo (B2B)">B2B</button>
       <button type="button" class="canalbtn" data-canal="Revenda">Revenda</button>
+      <button type="button" class="canalbtn" data-canal="Agri Revenda">Agri Rev.</button>
     </div>
     <div class="canallabel" id="lbl2">2. Digite o código</div>
     <div class="sbox" id="sbox">
@@ -115,7 +116,8 @@ const qEl=$("#q"), clrEl=$("#clr"), canalPick=$("#canalPick"),
 const ENTRIES = (typeof PRECOS!=="undefined") ? PRECOS : [];
 const VERSION = (typeof DATA_VERSION!=="undefined") ? DATA_VERSION : "";
 
-let canal = "";  // "Consumo (B2B)" | "Revenda"
+let canal = "";  // "Consumo (B2B)" | "Revenda" | "Agri Revenda"
+const REV_AGRI_TABS = new Set(["MCO","CVL","TI","OUTROS"]);
 try{ canal = localStorage.getItem("precos_canal") || ""; }catch(e){}
 
 function setCanal(c){
@@ -138,31 +140,44 @@ let t=null;
 qEl.addEventListener("input",()=>{ clrEl.style.display=qEl.value?"block":"none"; clearTimeout(t); t=setTimeout(render,110); });
 clrEl.onclick=()=>{ qEl.value=""; clrEl.style.display="none"; qEl.focus(); render(); };
 
+function filterByTerms(arr, q){
+  if(!q) return arr;
+  const terms=q.split(/\s+/).filter(Boolean);
+  return arr.filter(e=>{ const hay=norm(e.c)+" "+norm(e.d); return terms.every(t=>hay.includes(t)); });
+}
+
 function render(){
   if(!canal){
     countEl.textContent="";
-    resultsEl.innerHTML = empty("👆","Escolha o canal","Toque em <b class='k'>B2B</b> ou <b class='k'>Revenda</b> para começar.");
+    resultsEl.innerHTML = empty("👆","Escolha o canal","Toque em <b class='k'>B2B</b>, <b class='k'>Revenda</b> ou <b class='k'>Agri Rev.</b> para começar.");
     return;
   }
   const q=norm(qEl.value);
-  let list=ENTRIES.filter(e=>e.ca===canal);
-  if(q){
-    // busca por código E/OU nome: cada palavra digitada precisa aparecer
-    // no código ou na descrição (em qualquer ordem).
-    const terms=q.split(/\s+/).filter(Boolean);
-    list=list.filter(e=>{
-      const hay=norm(e.c)+" "+norm(e.d);
-      return terms.every(t=>hay.includes(t));
-    });
+  const canalLabel = canal==="Consumo (B2B)"?"B2B":canal==="Agri Revenda"?"Agri Revenda":"Revenda";
+  let list;
+
+  if(canal==="Agri Revenda"){
+    const agri = filterByTerms(ENTRIES.filter(e=>e.ca==="Consumo (B2B)" && norm(e.ab)==="AGRI REVENDA"), q);
+    if(q && agri.length>0){
+      list=agri;
+    } else if(q){
+      // Fallback: Revenda MCO/CVL/TI/OUTROS
+      list=filterByTerms(ENTRIES.filter(e=>e.ca==="Revenda" && REV_AGRI_TABS.has(norm(e.ab))), q);
+    } else {
+      list=agri;
+    }
+  } else {
+    list=filterByTerms(ENTRIES.filter(e=>e.ca===canal), q);
   }
+
   list=list.slice().sort((a,b)=> a.c.localeCompare(b.c,"pt-BR",{numeric:true}) || a.ab.localeCompare(b.ab,"pt-BR"));
   countEl.textContent = q && list.length? `${list.length} resultado(s)`:"";
 
   if(!q){
-    resultsEl.innerHTML = empty("🔎","Digite o código",`Canal <b class='k'>${canal==="Consumo (B2B)"?"B2B":"Revenda"}</b> selecionado. Digite o código (ex.: <b class='k'>123073</b>) ou o nome do produto.`);
+    resultsEl.innerHTML = empty("🔎","Digite o código",`Canal <b class='k'>${canalLabel}</b> selecionado. Digite o código (ex.: <b class='k'>123073</b>) ou o nome do produto.`);
     return;
   }
-  if(!list.length){ resultsEl.innerHTML=empty("🤔","Nada encontrado",`Nenhum produto com esse código/nome no canal ${canal==="Consumo (B2B)"?"B2B":"Revenda"}.`); return; }
+  if(!list.length){ resultsEl.innerHTML=empty("🤔","Nada encontrado",`Nenhum produto com esse código/nome no canal ${canalLabel}.`); return; }
   resultsEl.innerHTML=list.map(card).join("");
 }
 
