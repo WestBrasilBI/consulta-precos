@@ -85,7 +85,6 @@
     <div class="canalpick" id="canalPick">
       <button type="button" class="canalbtn" data-canal="Consumo (B2B)">B2B</button>
       <button type="button" class="canalbtn" data-canal="Revenda">Revenda</button>
-      <button type="button" class="canalbtn" data-canal="Agri Revenda">Agri Rev.</button>
     </div>
     <div class="canallabel" id="lbl2">2. Digite o código</div>
     <div class="sbox" id="sbox">
@@ -116,9 +115,9 @@ const qEl=$("#q"), clrEl=$("#clr"), canalPick=$("#canalPick"),
 const ENTRIES = (typeof PRECOS!=="undefined") ? PRECOS : [];
 const VERSION = (typeof DATA_VERSION!=="undefined") ? DATA_VERSION : "";
 
-let canal = "";  // "Consumo (B2B)" | "Revenda" | "Agri Revenda"
-const REV_AGRI_TABS = new Set(["MCO","CVL","TI","OUTROS"]);
+let canal = "";  // "Consumo (B2B)" | "Revenda"
 try{ canal = localStorage.getItem("precos_canal") || ""; }catch(e){}
+if(canal!=="Consumo (B2B)" && canal!=="Revenda") canal = "";  // ignora canal antigo inválido
 
 function setCanal(c){
   canal = c;
@@ -149,26 +148,12 @@ function filterByTerms(arr, q){
 function render(){
   if(!canal){
     countEl.textContent="";
-    resultsEl.innerHTML = empty("👆","Escolha o canal","Toque em <b class='k'>B2B</b>, <b class='k'>Revenda</b> ou <b class='k'>Agri Rev.</b> para começar.");
+    resultsEl.innerHTML = empty("👆","Escolha o canal","Toque em <b class='k'>B2B</b> ou <b class='k'>Revenda</b> para começar.");
     return;
   }
   const q=norm(qEl.value);
-  const canalLabel = canal==="Consumo (B2B)"?"B2B":canal==="Agri Revenda"?"Agri Revenda":"Revenda";
-  let list;
-
-  if(canal==="Agri Revenda"){
-    const agri = filterByTerms(ENTRIES.filter(e=>e.ca==="Consumo (B2B)" && norm(e.ab)==="AGRI REVENDA"), q);
-    if(q && agri.length>0){
-      list=agri;
-    } else if(q){
-      // Fallback: Revenda MCO/CVL/TI/OUTROS
-      list=filterByTerms(ENTRIES.filter(e=>e.ca==="Revenda" && REV_AGRI_TABS.has(norm(e.ab))), q);
-    } else {
-      list=agri;
-    }
-  } else {
-    list=filterByTerms(ENTRIES.filter(e=>e.ca===canal), q);
-  }
+  const canalLabel = canal==="Consumo (B2B)"?"B2B":"Revenda";
+  let list=filterByTerms(ENTRIES.filter(e=>e.ca===canal), q);
 
   list=list.slice().sort((a,b)=> a.c.localeCompare(b.c,"pt-BR",{numeric:true}) || a.ab.localeCompare(b.ab,"pt-BR"));
   countEl.textContent = q && list.length? `${list.length} resultado(s)`:"";
