@@ -1,4 +1,4 @@
-const CACHE = 'consulta-precos-20261015113648';
+const CACHE = 'consulta-precos-20261015133444';
 const ASSETS = ['./', './index.html', './data/data.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
