@@ -198,7 +198,25 @@ function card(e){
 boot();
 
 if("serviceWorker" in navigator){
-  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{}));
+  // Auto-atualizacao: quando sai uma versao nova, o app recarrega sozinho
+  // em todos os dispositivos conectados (sem precisar reinstalar).
+  let recarregando=false;
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(recarregando) return;           // evita loop de reload
+    if(!window.__swTinhaControle) return; // 1ª instalacao nao recarrega
+    recarregando=true;
+    location.reload();
+  });
+  window.addEventListener("load",async()=>{
+    window.__swTinhaControle = !!navigator.serviceWorker.controller;
+    try{
+      const reg=await navigator.serviceWorker.register("sw.js",{updateViaCache:"none"});
+      reg.update();
+      // checa atualizacao sempre que o app volta pro foco e de hora em hora
+      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update(); });
+      setInterval(()=>reg.update(),60*60*1000);
+    }catch(e){}
+  });
 }
 </script>
 </body>
