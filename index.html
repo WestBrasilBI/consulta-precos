@@ -77,6 +77,7 @@
 
   /* tela de login */
   #login{position:fixed;inset:0;z-index:1000;background:linear-gradient(160deg,#0c4976,#09324f);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:28px}
+  #login[hidden]{display:none}  /* o atributo hidden tem que vencer o display:flex acima */
   #login .lg{font-size:30px;font-weight:800;letter-spacing:-.4px}
   #login .lsub{font-size:14px;opacity:.8;margin:4px 0 30px}
   #login .lcard{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:16px;padding:26px 22px;max-width:360px;width:100%}
