@@ -270,6 +270,7 @@ if("serviceWorker" in navigator){
   navigator.serviceWorker.addEventListener("controllerchange",()=>{
     if(recarregando) return;           // evita loop de reload
     if(!window.__swTinhaControle) return; // 1ª instalacao nao recarrega
+    if(/[#&?](code|error|state)=/.test(location.hash+location.search)) return; // nao recarrega durante o retorno do login
     recarregando=true;
     location.reload();
   });
