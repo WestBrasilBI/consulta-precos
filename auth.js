@@ -21,6 +21,16 @@ const Auth = (() => {
     try { localStorage.setItem('consulta_login_diag', JSON.stringify(Object.assign({ quando: new Date().toLocaleString('pt-BR'), href: location.href }, o))); } catch (e) {}
   }
 
+  // Log interno do MSAL guardado na tela (anel de ~40 linhas) p/ diagnóstico.
+  function logMsal(msg) {
+    try {
+      const arr = JSON.parse(localStorage.getItem('consulta_msal_log') || '[]');
+      arr.push(String(msg).replace(/^\[[^\]]*\]\s*/, '').slice(0, 180));
+      while (arr.length > 40) arr.shift();
+      localStorage.setItem('consulta_msal_log', JSON.stringify(arr));
+    } catch (e) {}
+  }
+
   function contaKeys(store) {
     try { return Object.keys(store).filter(k => /msal/i.test(k)).length; } catch (e) { return -1; }
   }
@@ -39,7 +49,15 @@ const Auth = (() => {
       // storeAuthStateInCookie: o estado do login (state/nonce/PKCE) vai tbm pra cookie,
       // sobrevivendo ao vai-e-volta mesmo quando o sessionStorage se perde.
       cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true },
+      system: {
+        loggerOptions: {
+          loggerCallback: (level, message, containsPii) => { if (!containsPii) logMsal(message); },
+          piiLoggingEnabled: false,
+          logLevel: (msal.LogLevel ? msal.LogLevel.Verbose : 3),
+        },
+      },
     });
+    try { localStorage.removeItem('consulta_msal_log'); } catch (e) {}  // só o log desta tentativa
     await app.initialize();
     let r = null, erro = null;
     try {
@@ -77,6 +95,7 @@ const Auth = (() => {
     get conta() { return conta; },
     iniciar, entrar, sair,
     ultimoDiag() { try { return JSON.parse(localStorage.getItem('consulta_login_diag')); } catch (e) { return null; } },
+    msalLog() { try { return JSON.parse(localStorage.getItem('consulta_msal_log') || '[]'); } catch (e) { return []; } },
   };
 })();
 window.Auth = Auth;   // expõe pro script do index (const não vira propriedade de window)
