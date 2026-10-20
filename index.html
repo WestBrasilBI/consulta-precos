@@ -256,43 +256,33 @@ async function gate(){
       btnSair.hidden=false; btnSair.addEventListener("click",()=>Auth.sair());
       boot();
     } else {
-      // Não entrou: se houve tentativa de login (voltou da Microsoft), mostra o porquê.
+      // DEBUG: mostra sempre o diagnóstico + o log interno do MSAL (motivo real).
       const d = Auth.ultimoDiag && Auth.ultimoDiag();
-      if(d && (d.hashTemCode || d.teveResposta || d.nContas>0 || d.erro)){
-        erroEl.style.display="block";
-        erroEl.innerHTML = "Login não concluiu — diagnóstico:<br>"+
+      const lg = (Auth.msalLog ? Auth.msalLog() : []);
+      erroEl.style.display="block";
+      erroEl.innerHTML = "Diagnóstico do login:<br>"+
+        (d ? (
           (d.erro ? ("erro: "+d.erro+"<br>") : "")+
-          "código na URL: "+(d.hashTemCode?"sim":"não")+"<br>"+
-          "resposta processada: "+(d.teveResposta?"sim":"não")+"<br>"+
-          "contas vistas: "+((d.contas&&d.contas.length)?d.contas.map(c=>c.u+" (tenant "+(c.t||"?")+")").join("; "):"nenhuma")+"<br>"+
-          "chaves MSAL (local/sessão): "+d.msalLS+"/"+d.msalSS+"<br>"+
-          "tenant esperado: "+d.tenantCfg;
-      }
+          "código na URL: "+(d.hashTemCode?"sim":"não")+" · resposta: "+(d.teveResposta?"sim":"não")+"<br>"+
+          "contas: "+((d.contas&&d.contas.length)?d.contas.map(c=>c.u).join("; "):"nenhuma")+"<br>"+
+          "chaves MSAL local/sessão: "+d.msalLS+"/"+d.msalSS+"<br>"
+        ) : "sem registro<br>")+
+        (lg.length ? ("<small style='opacity:.85'>— log MSAL —<br>"+lg.slice(-12).map(x=>String(x).replace(/</g,"&lt;")).join("<br>")+"</small>") : "");
     }
   }catch(e){
     erroEl.style.display="block"; erroEl.textContent=e.message;
   }
 }
 
-// Registra o service worker SÓ depois de resolver o login, pra nunca interromper
-// o retorno da Microsoft (troca de token) com um reload.
-gate().finally(registrarSW);
+gate();
 
-function registrarSW(){
+// DEBUG (temporário): desliga o service worker — desregistra e limpa os caches —
+// pra eliminar qualquer interferência de versão em cache ou reload no login.
+(function killSW(){
   if(!("serviceWorker" in navigator)) return;
-  let recarregando=false;
-  navigator.serviceWorker.addEventListener("controllerchange",()=>{
-    if(recarregando) return;
-    if(/[#&?](code|error|state)=/.test(location.hash+location.search)) return; // nao recarrega durante o retorno do login
-    recarregando=true;
-    location.reload();
-  });
-  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
-    reg.update();
-    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update(); });
-    setInterval(()=>reg.update(),60*60*1000);
-  }).catch(()=>{});
-}
+  navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
+  try{ if(window.caches && caches.keys) caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))); }catch(e){}
+})();
 </script>
 </body>
 </html>
