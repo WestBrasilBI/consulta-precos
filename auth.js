@@ -12,21 +12,42 @@ const Auth = (() => {
 
   function contaPermitida(c) {
     const email = String(c.username || '').toLowerCase();
-    return email.endsWith('@' + String(CFG.DOMINIO_PERMITIDO).toLowerCase()) && c.tenantId === CFG.TENANT_ID;
+    const tid = String(c.tenantId || '').toLowerCase();
+    return email.endsWith('@' + String(CFG.DOMINIO_PERMITIDO).toLowerCase()) && tid === String(CFG.TENANT_ID).toLowerCase();
+  }
+
+  // Grava o que aconteceu na última tentativa (ajuda a diagnosticar sem precisar do console).
+  function diag(o) {
+    try { localStorage.setItem('consulta_login_diag', JSON.stringify(Object.assign({ quando: new Date().toLocaleString('pt-BR'), href: location.href }, o))); } catch (e) {}
   }
 
   async function iniciar() {
     if (!ativo) return null;                 // login desligado = libera o app
     app = new msal.PublicClientApplication({
-      auth: { clientId: CFG.CLIENT_ID, authority: `https://login.microsoftonline.com/${CFG.TENANT_ID}`, redirectUri },
+      auth: {
+        clientId: CFG.CLIENT_ID,
+        authority: `https://login.microsoftonline.com/${CFG.TENANT_ID}`,
+        redirectUri,
+        navigateToLoginRequestUrl: false,   // processa a resposta aqui mesmo, sem navegar de novo
+      },
       cache: { cacheLocation: 'localStorage' },
     });
     await app.initialize();
-    const r = await app.handleRedirectPromise();
+    let r = null;
+    try {
+      r = await app.handleRedirectPromise();
+    } catch (e) {
+      diag({ etapa: 'handleRedirect', erro: String((e && e.message) || e) });
+      throw new Error('não consegui concluir o login: ' + ((e && e.message) || e));
+    }
     // só contas @westbrasil.com.br do tenant da West; convidados/externos são recusados
-    const contas = [(r && r.account), ...app.getAllAccounts()].filter(Boolean);
+    const todas = app.getAllAccounts();
+    const contas = [(r && r.account), ...todas].filter(Boolean);
     const recusada = contas.find(c => !contaPermitida(c));
     conta = contas.find(contaPermitida) || null;
+    diag({ etapa: 'iniciar', teveResposta: !!r, nContas: todas.length,
+           contas: contas.map(c => ({ u: c.username, t: c.tenantId })),
+           tenantCfg: CFG.TENANT_ID, aceita: !!conta });
     if (recusada && !conta) {
       await app.clearCache({ account: recusada }).catch(() => {});
       throw new Error(`a conta ${recusada.username} não é da West Brasil. Entre com o seu e-mail @${CFG.DOMINIO_PERMITIDO}.`);
@@ -46,6 +67,7 @@ const Auth = (() => {
     get ativo() { return ativo; },
     get conta() { return conta; },
     iniciar, entrar, sair,
+    ultimoDiag() { try { return JSON.parse(localStorage.getItem('consulta_login_diag')); } catch (e) { return null; } },
   };
 })();
 window.Auth = Auth;   // expõe pro script do index (const não vira propriedade de window)
