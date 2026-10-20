@@ -10,8 +10,7 @@
  * Se a TI preferir um registro NOVO só para o Consulta, troque o CLIENT_ID abaixo pelo novo.
  */
 window.CONFIG = {
-  // Liga/desliga a exigência de login. Deixe false para publicar SEM login enquanto a TI
-  // não autoriza o redirect; vire true quando o redirect estiver autorizado.
+  // Liga/desliga a exigência de login. false = app abre direto, sem login.
   LOGIN_ATIVO: true,
 
   TENANT_ID: '1516fbda-e5c5-429f-8c31-bf8dc4dedc55',   // WEST
