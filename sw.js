@@ -1,4 +1,4 @@
-const CACHE = 'consulta-precos-20261020083156';
+const CACHE = 'consulta-precos-20261020085029';
 const ASSETS = ['./', './index.html', './config.js', './auth.js', './vendor/msal-browser.min.js', './data/data.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
@@ -14,6 +14,8 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
+  // só os arquivos do app; login Microsoft (cross-origin) e POSTs passam direto
+  if (e.request.method !== 'GET' || new URL(e.request.url).origin !== location.origin) return;
   e.respondWith(
     // online: sempre busca a versão mais nova; offline: usa a última salva
     fetch(e.request, { cache: 'no-store' })
