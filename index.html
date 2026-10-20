@@ -239,36 +239,30 @@ async function gate(){
         btnSair=$("#btnSair"), hwho=$("#hwho"), lfoot=$("#lfoot");
   if(lfoot) lfoot.textContent = VERSION ? ("Base "+VERSION) : "";
 
+  function mostrarApp(conta){
+    loginEl.hidden=true;
+    subEl.style.display="none";
+    hwho.hidden=false; hwho.textContent = (conta.name||conta.username||"").split(" ")[0];
+    btnSair.hidden=false; btnSair.addEventListener("click",()=>Auth.sair());
+    boot();
+  }
+
   // Login desligado (CONFIG.LOGIN_ATIVO=false ou MSAL indisponível): libera o app direto.
   if(!(window.Auth && Auth.ativo)){ if(loginEl) loginEl.hidden=true; boot(); return; }
 
   loginEl.hidden=false;
+  // Clique no botão abre o popup de login; ao voltar com a conta, mostra o app.
   btnEntrar.addEventListener("click",()=>{
     btnEntrar.disabled=true; erroEl.style.display="none";
-    Auth.entrar().catch(e=>{ btnEntrar.disabled=false; erroEl.style.display="block"; erroEl.textContent=e.message; });
+    Auth.entrar()
+      .then(c=>{ if(c) mostrarApp(c); })
+      .catch(e=>{ btnEntrar.disabled=false; erroEl.style.display="block"; erroEl.textContent=e.message; })
+      .finally(()=>{ btnEntrar.disabled=false; });
   });
+  // Na carga: se já há sessão válida (SSO), entra direto.
   try{
     const conta = await Auth.iniciar();
-    if(conta){
-      loginEl.hidden=true;
-      subEl.style.display="none";
-      hwho.hidden=false; hwho.textContent = (conta.name||conta.username||"").split(" ")[0];
-      btnSair.hidden=false; btnSair.addEventListener("click",()=>Auth.sair());
-      boot();
-    } else {
-      // DEBUG: mostra sempre o diagnóstico + o log interno do MSAL (motivo real).
-      const d = Auth.ultimoDiag && Auth.ultimoDiag();
-      const lg = (Auth.msalLog ? Auth.msalLog() : []);
-      erroEl.style.display="block";
-      erroEl.innerHTML = "Diagnóstico do login:<br>"+
-        (d ? (
-          (d.erro ? ("erro: "+d.erro+"<br>") : "")+
-          "código na URL: "+(d.hashTemCode?"sim":"não")+" · resposta: "+(d.teveResposta?"sim":"não")+"<br>"+
-          "contas: "+((d.contas&&d.contas.length)?d.contas.map(c=>c.u).join("; "):"nenhuma")+"<br>"+
-          "chaves MSAL local/sessão: "+d.msalLS+"/"+d.msalSS+"<br>"
-        ) : "sem registro<br>")+
-        (lg.length ? ("<small style='opacity:.85'>— log MSAL —<br>"+lg.slice(-12).map(x=>String(x).replace(/</g,"&lt;")).join("<br>")+"</small>") : "");
-    }
+    if(conta) mostrarApp(conta);
   }catch(e){
     erroEl.style.display="block"; erroEl.textContent=e.message;
   }
@@ -276,13 +270,13 @@ async function gate(){
 
 gate();
 
-// DEBUG (temporário): desliga o service worker — desregistra e limpa os caches —
-// pra eliminar qualquer interferência de versão em cache ou reload no login.
-(function killSW(){
-  if(!("serviceWorker" in navigator)) return;
-  navigator.serviceWorker.getRegistrations().then(rs=>rs.forEach(r=>r.unregister())).catch(()=>{});
-  try{ if(window.caches && caches.keys) caches.keys().then(ks=>ks.forEach(k=>caches.delete(k))); }catch(e){}
-})();
+// Service worker simples (igual ao Pesquisa): cache offline + sempre a versão mais nova
+// quando online. Sem auto-reload (que atrapalhava o login).
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>{
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});
+  });
+}
 </script>
 </body>
 </html>
