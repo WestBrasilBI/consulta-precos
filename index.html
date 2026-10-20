@@ -258,12 +258,14 @@ async function gate(){
     } else {
       // Não entrou: se houve tentativa de login (voltou da Microsoft), mostra o porquê.
       const d = Auth.ultimoDiag && Auth.ultimoDiag();
-      if(d && (d.teveResposta || d.nContas>0 || d.erro)){
+      if(d && (d.hashTemCode || d.teveResposta || d.nContas>0 || d.erro)){
         erroEl.style.display="block";
         erroEl.innerHTML = "Login não concluiu — diagnóstico:<br>"+
           (d.erro ? ("erro: "+d.erro+"<br>") : "")+
-          "resposta da Microsoft: "+(d.teveResposta?"sim":"não")+"<br>"+
+          "código na URL: "+(d.hashTemCode?"sim":"não")+"<br>"+
+          "resposta processada: "+(d.teveResposta?"sim":"não")+"<br>"+
           "contas vistas: "+((d.contas&&d.contas.length)?d.contas.map(c=>c.u+" (tenant "+(c.t||"?")+")").join("; "):"nenhuma")+"<br>"+
+          "chaves MSAL (local/sessão): "+d.msalLS+"/"+d.msalSS+"<br>"+
           "tenant esperado: "+d.tenantCfg;
       }
     }
