@@ -21,8 +21,14 @@ const Auth = (() => {
     try { localStorage.setItem('consulta_login_diag', JSON.stringify(Object.assign({ quando: new Date().toLocaleString('pt-BR'), href: location.href }, o))); } catch (e) {}
   }
 
+  function contaKeys(store) {
+    try { return Object.keys(store).filter(k => /msal/i.test(k)).length; } catch (e) { return -1; }
+  }
+
   async function iniciar() {
     if (!ativo) return null;                 // login desligado = libera o app
+    const hashIni = location.hash || '';
+    const hashTemCode = /[#&?](code|error)=/.test(hashIni + location.search);
     app = new msal.PublicClientApplication({
       auth: {
         clientId: CFG.CLIENT_ID,
@@ -30,24 +36,27 @@ const Auth = (() => {
         redirectUri,
         navigateToLoginRequestUrl: false,   // processa a resposta aqui mesmo, sem navegar de novo
       },
-      cache: { cacheLocation: 'localStorage' },
+      // storeAuthStateInCookie: o estado do login (state/nonce/PKCE) vai tbm pra cookie,
+      // sobrevivendo ao vai-e-volta mesmo quando o sessionStorage se perde.
+      cache: { cacheLocation: 'localStorage', storeAuthStateInCookie: true },
     });
     await app.initialize();
-    let r = null;
+    let r = null, erro = null;
     try {
       r = await app.handleRedirectPromise();
     } catch (e) {
-      diag({ etapa: 'handleRedirect', erro: String((e && e.message) || e) });
-      throw new Error('não consegui concluir o login: ' + ((e && e.message) || e));
+      erro = String((e && e.message) || e);
     }
     // só contas @westbrasil.com.br do tenant da West; convidados/externos são recusados
     const todas = app.getAllAccounts();
     const contas = [(r && r.account), ...todas].filter(Boolean);
     const recusada = contas.find(c => !contaPermitida(c));
     conta = contas.find(contaPermitida) || null;
-    diag({ etapa: 'iniciar', teveResposta: !!r, nContas: todas.length,
+    diag({ hashTemCode, hashIni: hashIni.slice(0, 18), teveResposta: !!r, nContas: todas.length,
            contas: contas.map(c => ({ u: c.username, t: c.tenantId })),
-           tenantCfg: CFG.TENANT_ID, aceita: !!conta });
+           tenantCfg: CFG.TENANT_ID, aceita: !!conta,
+           msalLS: contaKeys(localStorage), msalSS: contaKeys(sessionStorage), erro });
+    if (erro && !conta) throw new Error('não consegui concluir o login: ' + erro);
     if (recusada && !conta) {
       await app.clearCache({ account: recusada }).catch(() => {});
       throw new Error(`a conta ${recusada.username} não é da West Brasil. Entre com o seu e-mail @${CFG.DOMINIO_PERMITIDO}.`);
