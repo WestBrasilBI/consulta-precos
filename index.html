@@ -255,35 +255,41 @@ async function gate(){
       hwho.hidden=false; hwho.textContent = (conta.name||conta.username||"").split(" ")[0];
       btnSair.hidden=false; btnSair.addEventListener("click",()=>Auth.sair());
       boot();
+    } else {
+      // Não entrou: se houve tentativa de login (voltou da Microsoft), mostra o porquê.
+      const d = Auth.ultimoDiag && Auth.ultimoDiag();
+      if(d && (d.teveResposta || d.nContas>0 || d.erro)){
+        erroEl.style.display="block";
+        erroEl.innerHTML = "Login não concluiu — diagnóstico:<br>"+
+          (d.erro ? ("erro: "+d.erro+"<br>") : "")+
+          "resposta da Microsoft: "+(d.teveResposta?"sim":"não")+"<br>"+
+          "contas vistas: "+((d.contas&&d.contas.length)?d.contas.map(c=>c.u+" (tenant "+(c.t||"?")+")").join("; "):"nenhuma")+"<br>"+
+          "tenant esperado: "+d.tenantCfg;
+      }
     }
-    // sem conta e sem erro: fica na tela de login aguardando o clique em "Entrar"
   }catch(e){
     erroEl.style.display="block"; erroEl.textContent=e.message;
   }
 }
-gate();
 
-if("serviceWorker" in navigator){
-  // Auto-atualizacao: quando sai uma versao nova, o app recarrega sozinho
-  // em todos os dispositivos conectados (sem precisar reinstalar).
+// Registra o service worker SÓ depois de resolver o login, pra nunca interromper
+// o retorno da Microsoft (troca de token) com um reload.
+gate().finally(registrarSW);
+
+function registrarSW(){
+  if(!("serviceWorker" in navigator)) return;
   let recarregando=false;
   navigator.serviceWorker.addEventListener("controllerchange",()=>{
-    if(recarregando) return;           // evita loop de reload
-    if(!window.__swTinhaControle) return; // 1ª instalacao nao recarrega
+    if(recarregando) return;
     if(/[#&?](code|error|state)=/.test(location.hash+location.search)) return; // nao recarrega durante o retorno do login
     recarregando=true;
     location.reload();
   });
-  window.addEventListener("load",async()=>{
-    window.__swTinhaControle = !!navigator.serviceWorker.controller;
-    try{
-      const reg=await navigator.serviceWorker.register("sw.js",{updateViaCache:"none"});
-      reg.update();
-      // checa atualizacao sempre que o app volta pro foco e de hora em hora
-      document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update(); });
-      setInterval(()=>reg.update(),60*60*1000);
-    }catch(e){}
-  });
+  navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
+    reg.update();
+    document.addEventListener("visibilitychange",()=>{ if(!document.hidden) reg.update(); });
+    setInterval(()=>reg.update(),60*60*1000);
+  }).catch(()=>{});
 }
 </script>
 </body>
