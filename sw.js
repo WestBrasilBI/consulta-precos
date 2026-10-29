@@ -1,4 +1,4 @@
-const CACHE = 'consulta-precos-20261027110958';
+const CACHE = 'consulta-precos-20261029084820';
 const ASSETS = ['./', './index.html', './config.js', './auth.js', './vendor/msal-browser.min.js', './data/data.js', './manifest.json', './icon-192.png', './icon-512.png'];
 
 self.addEventListener('install', e => {
