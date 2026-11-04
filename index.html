@@ -60,6 +60,7 @@
   thead th{font-size:10px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);border-bottom:2px solid var(--border);font-weight:700}
   tbody tr:last-child td{border-bottom:0}
   .price{font-weight:800;font-variant-numeric:tabular-nums;color:var(--text)}
+  .perL{display:block;font-size:11px;font-weight:600;color:var(--muted);margin-top:2px;font-variant-numeric:tabular-nums}
   .rl,.mg{color:var(--muted);font-variant-numeric:tabular-nums;font-size:13px}
   .note{font-size:11px;color:var(--amber);margin-top:7px}
 
@@ -214,7 +215,7 @@ function card(e){
   const perLitro=e.t.every(x=>x.pl);
   const rows=e.t.map(x=>`<tr>
       <td>${x.l}</td>
-      <td class="price">${brl(x.p)}</td>
+      <td class="price">${brl(x.p)}${(e.e && x.p!=null)?`<span class="perL">${brl(x.p/e.e)}/L</span>`:""}</td>
       <td class="mg">${x.ds!=null?pct(x.ds):"—"}</td></tr>`).join("");
   const badges=[
     e.ab?`<span class="badge aba">${e.ab}</span>`:"",
