@@ -272,11 +272,25 @@ async function gate(){
 
 gate();
 
-// Service worker simples (igual ao Pesquisa): cache offline + sempre a versão mais nova
-// quando online. Sem auto-reload (que atrapalhava o login).
+// Service worker: cache offline + sempre a versão mais nova quando online.
+// Auto-update: quando houver uma publicação nova, o app recarrega sozinho.
+// (Seguro agora: o login é por popup, não mexe na página principal.)
 if("serviceWorker" in navigator){
+  let recarregou=false;
+  // quando o novo SW assume o controle, recarrega uma única vez pra pegar a versão nova
+  navigator.serviceWorker.addEventListener("controllerchange",()=>{
+    if(recarregou) return;
+    recarregou=true;
+    location.reload();
+  });
   window.addEventListener("load",()=>{
-    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).catch(()=>{});
+    navigator.serviceWorker.register("sw.js",{updateViaCache:"none"}).then(reg=>{
+      // checa atualização ao abrir e sempre que o app volta pro primeiro plano
+      const checar=()=>{ try{reg.update();}catch(e){} };
+      checar();
+      document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") checar(); });
+      setInterval(checar, 60*60*1000); // e de hora em hora, se ficar aberto
+    }).catch(()=>{});
   });
 }
 </script>
